@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+  "id": "clist-calc",
+  "name": "CList Calc",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Perform calculations on nested or simple task lists using sum, average, and math expressions.",
+  "author": "Abdur Nur Porag",
+  "authorUrl": "https://github.com/Abdur-Nur-Porag",
+  "isDesktopOnly": false
 }

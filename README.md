@@ -1,90 +1,189 @@
-# Obsidian Sample Plugin
+# Carbon CCalc-List
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+CList-Calc is a standard list-based calculation plugin for Obsidian. It helps you quickly perform calculations on lists, making it ideal for tracking **daily or monthly expenses, budgets, project costs, shopping lists, or personal finance tracking**.
+With CList-Calc, you can use simple or nested lists to organize your data and apply calculations like sum, average, count, min/max, and more, directly in your Obsidian notes.
+## Example use cases:
+- Daily Expenses – Track meals, transport, and shopping costs.
+- Monthly Budget – Calculate total spending across multiple categories.
+- Shopping List – Sum item costs automatically.
+- Project Costs – Manage expenses for materials, labor, and overhead.
+- Holiday Planning – Track hotel, transport, and activity costs.
+- Personal Finance – Keep track of income, bills, and savings.
+___
+Release Version: V1.0
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Language: #javascript
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Support: All platforms.
 
-## First time developing plugins?
+Author:Abdurnurporag
 
-Quick starting guide for new plugin devs:
+### CCalc-list use
+```txt
+BlockName:ccalc-list
+```
+### Available Function
+```txt
+General Function:
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+1. Sum(var)
+2. Avg(var)//Avoid it insted of it use Count()
+3. Count(var)
+4. Max(var)
+5. Min(var)
+6. Median(var)
+7. Mode(var)
+8. Range(var)
+9. MaxLabel(var)
+10. MinLabel(var)
+11. AscadingList(var)
+12. DscadingList(var)
+13. TotalChecked(var)
+14. TotalUnChecked(var)
+15. TotalCheckbox(var)
+16. StdDev(var)
+17. Var(var)
+```
+### Math Function
+```txt
+Math Function:
+1. Root(var||num)
+2. nRoot(value,n)
+3. Power(value,power)
+4. Floor(var||num)
+5. Round(var||num)
+6. Ceil(var||num)
+7. Abs(var||num)
+8. Log(var||num)
+9. Ln(var||num)
+10. Sin(var||num)
+11. Cos(var||num)
+12. Tan(var||num)
+13. Cot(var||num)
+14. Sec(var||num)
+15. Cosec(var||num)
+16. ASin(var||num)// inverse of sin
+17. ACos(var||num)// inverse of cos
+18. ATan(var||num)// inverse of tan
+```
+```txt
+Angle in degree
+```
+## Access var name
+```txt
+General list:
+			Var name,
+For nested list:
+			ParentName.childName...
+```
+# How to use?
+Copy after here and paste in obsidian notes and see.
+I think you will understand.
 
-## Releasing new releases
+## Simple brief
+As beginner you first follow the simple list. Then go nested.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+## List Syntex:
+Simple List:
+- MyBugget
+	- [x] Egg=199*30
+	- [x] Chicken= 189*230
+```clist-calc
+Total Cost=Sum(MyBugget)
+```
+Simple List:
+- [x] MyCost
+	- [ ] Bus Ticket=600
+	- [ ] Plane Ticket=8000
+```clist-calc
+Total Cost=Sum(MyCost)
+```
+Nested List:
+- Holiday Cost
+	- Hotel
+		- [ ] Alpha Sea=10000
+		- [ ] Black Core=20000
+	- Airplane
+		- [ ] Dhaka to Chattogram = 23000
+		- [ ] Chottogram to Katmandu =45000
+```clist-calc
+Hotel Cost=Sum(Holiday Cost.Hotel)
+Airplane Cost=Sum(Holiday Cost.Airplane)
+Total Cost=Sum(Holiday Cost)
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
 ```
 
-If you have multiple URLs, you can also do:
+### Comments And Show
+```txt
+/*use multiple line comment*/
+// use for hide
+"Showing value"//use for showing something
+```
+Example:
+```clist-calc
+/*this is comment*/
+Print=" Here showing text"
+// hiddenNum=10;
+ hiddenNun=hiddenNum
+ 
+```
+### Demo Project
+- MyFinance
+    - DailyExpenses
+        - [x] Breakfast = 150
+        - [x] Lunch = 300
+        - [x] Dinner = 250
+        - [x] Transport = 120
+    - MonthlyBills
+        - Rent = 15000
+        - Utilities
+            - Electricity = 2200
+            - Water = 500
+            - Internet = 1200
+        - Subscriptions
+            - Netflix = 800
+            - Spotify = 500
+            - News = 300
+    - Savings
+        - [x] FixedDeposit = 10000
+        - [ ] EmergencyFund = 5000
+    - Investments
+        - Stock
+            - Tesla = 20000
+            - Apple = 15000
+        - MutualFund
+            - FundA = 5000
+            - FundB = 10000
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+```clist-calc
+/* General Function Examples */
+TotalDaily = Sum(MyFinance.DailyExpenses)
+AverageDaily = Avg(MyFinance.DailyExpenses)
+MaxExpense = Max(MyFinance.DailyExpenses)
+MinExpense = Min(MyFinance.DailyExpenses)
+CountExpenses = Count(MyFinance.DailyExpenses)
+RangeExpenses = Range(MyFinance.DailyExpenses)
+StdDevExpenses = StdDev(MyFinance.DailyExpenses)
+VarExpenses = Var(MyFinance.DailyExpenses)
+TotalCheckedItems = TotalChecked(MyFinance.Savings)
+TotalUnCheckedItems = TotalUnChecked(MyFinance.Savings)
+AscDailyExpenses = AscadingList(MyFinance.DailyExpenses)
+DescDailyExpenses = DscadingList(MyFinance.DailyExpenses)
+MaxLabelExpense = MaxLabel(MyFinance.DailyExpenses)
+MinLabelExpense = MinLabel(MyFinance.DailyExpenses)
+
+/* Nested Totals */
+TotalUtilities = Sum(MyFinance.MonthlyBills.Utilities)
+TotalSubscriptions = Sum(MyFinance.MonthlyBills.Subscriptions)
+TotalBills = Sum(MyFinance.MonthlyBills)
+TotalInvestments = Sum(MyFinance.Investments.Stock) + Sum(MyFinance.Investments.MutualFund)
+TotalFinance = Sum(MyFinance.DailyExpenses) + TotalBills + TotalInvestments + Sum(MyFinance.Savings)
+
 ```
 
-## API Documentation
 
-See https://docs.obsidian.md
+CList Calc is open source. You can use, modify, and redistribute it freely. 
+The author is not responsible for any issues caused by using or modifying this plugin.
+
+
+
