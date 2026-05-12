@@ -16,9 +16,10 @@ Language: #javascript
 
 Support: All platforms.
 
-Author:Abdurnurporag
+Author:Abdur-Nur-Porag
+Email: abdurnurporag@gmail.com
 
-### CCalc-list use
+### Clist-Calc use
 ```txt
 BlockName:clist-calc
 ```
@@ -181,9 +182,9 @@ TotalFinance = Sum(MyFinance.DailyExpenses) + TotalBills + TotalInvestments + Su
 
 ```
 
+🌟🌟 If find bug, or anything else please ` create issues in github`.
 
-CList Calc is open source. You can use, modify, and redistribute it freely. 
-The author is not responsible for any issues caused by using or modifying this plugin.
+"CList Calc is open source"
 
 
 
