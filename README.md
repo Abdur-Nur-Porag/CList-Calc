@@ -125,7 +125,7 @@ Total Cost=Hotel Cost+Airplane Cost
 		- [x] Group Yellow = 6500
 		- [ ] Group Red = 5000
 	- Food
-		- [x] Mourning = 500
+		- [x] Morning = 500
 		- [x] Noon = 500
 		- [x] Evening = 1000
 		- [x] Nignt = 500
