@@ -17,6 +17,7 @@ Language: #javascript
 Support: All platforms.
 
 Author:Abdur-Nur-Porag
+
 Email: abdurnurporag@gmail.com
 
 ### Clist-Calc use
