@@ -111,7 +111,7 @@ Nested List:
 ```clist-calc
 Hotel Cost=Sum(Holiday Cost.Hotel)
 Airplane Cost=Sum(Holiday Cost.Airplane)
-Total Cost=Sum(Holiday Cost)
+Total Cost=Hotel Cost+Airplane Cost
 
 ```
 
