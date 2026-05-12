@@ -1,4 +1,4 @@
-# Carbon CCalc-List
+# Carbon CList-Calc
 
 CList-Calc is a standard list-based calculation plugin for Obsidian. It helps you quickly perform calculations on lists, making it ideal for tracking **daily or monthly expenses, budgets, project costs, shopping lists, or personal finance tracking**.
 With CList-Calc, you can use simple or nested lists to organize your data and apply calculations like sum, average, count, min/max, and more, directly in your Obsidian notes.
@@ -20,7 +20,7 @@ Author:Abdurnurporag
 
 ### CCalc-list use
 ```txt
-BlockName:ccalc-list
+BlockName:clist-calc
 ```
 ### Available Function
 ```txt
@@ -82,7 +82,7 @@ I think you will understand.
 
 ## Simple brief
 As beginner you first follow the simple list. Then go nested.
-
+⚠️ must use code block name `clist-calc`.
 ## List Syntex:
 Simple List:
 - MyBugget
