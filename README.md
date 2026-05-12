@@ -86,21 +86,21 @@ I think you will understand.
 As beginner you first follow the simple list. Then go nested.
 ⚠️ must use code block name `clist-calc`.
 ## List Syntex:
-Simple List:
+## Simple List
 - MyBugget
 	- [x] Egg=199*30
 	- [x] Chicken= 189*230
 ```clist-calc
 Total Cost=Sum(MyBugget)
 ```
-Simple List:
+## Simple List
 - [x] MyCost
 	- [ ] Bus Ticket=600
 	- [ ] Plane Ticket=8000
 ```clist-calc
 Total Cost=Sum(MyCost)
 ```
-Nested List:
+## Nested List
 - Holiday Cost
 	- Hotel
 		- [ ] Alpha Sea=10000
@@ -114,6 +114,34 @@ Airplane Cost=Sum(Holiday Cost.Airplane)
 Total Cost=Hotel Cost+Airplane Cost
 
 ```
+## College Tour
+- College Tour
+	- Present Student
+		- [ ] Group Green = 80
+		- [x] Group Yellow = 70
+		- [ ] Group Red = 120
+	- Expense
+		- [ ] Group Green = 4500
+		- [x] Group Yellow = 6500
+		- [ ] Group Red = 5000
+	- Food
+		- [x] Mourning = 500
+		- [x] Noon = 500
+		- [x] Evening = 1000
+		- [x] Nignt = 500
+```clist-calc
+Total Students = Sum(College Tour.Present Student)
+Group Green Budget= Sum(College Tour.Present Student.Group Green)*Sum(College Tour.Expense.Group Green)+" BDT"
+Group Yellow Budget=Sum(College Tour.Present Student.Group Yellow)*Sum(College Tour.Expense.Group Yellow)+" BDT"
+Group Red Budget =Sum(College Tour.Present Student.Group Red)*Sum(College Tour.Expense.Group Red)+" BDT"
+
+Total Budget= Group Green Budget +Group Yellow Budget+ Group Red Budget +" BDT"
+
+Total Food Expense= Sum(College Tour.Present Student)*Sum(College Tour.Food) +" BDT"
+
+Left Money = Total Budget - Total Food Expense +" BDT"
+```
+
 
 ### Comments And Show
 ```txt
