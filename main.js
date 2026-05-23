@@ -1,9 +1,113 @@
 /*
 Name: Carbon CCalc List
-Versio: V1.0
+Version: V1.4
 Author: AbdurNurPorag
-Git:https://github.com/Abdur-Nur-Porag/ccalc-list
+Git: https://github.com/Abdur-Nur-Porag/ccalc-list
 
+Changelog V1.4:
+─────────────────────────────────────────────────────────────────
+NEW SYNTAX
+  • Full "- [ ] name = value" and "- name = value" syntax now
+    supported inside clist-calc blocks identically to bare "name = value"
+  • Prefix / suffix strings in list items:
+      - [ ] Total = "৳" + Rice+Oil+Eggs     → prefix "৳"
+      - [ ] Total = Rice+Oil+Eggs + " BDT"  → suffix " BDT"
+      Both inline string quoting AND trailing-word unit are resolved.
+
+NEW ROW DIRECTIVES
+  • @del  / @strike     → strikethrough on the value cell
+  • @u    / @underline  → underline on the value cell
+  • @i    / @italic     → italic on the value cell
+  • @color:xxx          → custom CSS color on the value cell (hex/name)
+  • @dim                → dim / muted value (50 % opacity)
+  • @success            → green semantic color on value
+  • @warning            → orange semantic color on value
+  • @danger             → red semantic color on value
+  • @tag:Label          → colored badge tag shown in the Note column
+  • @label-bold         → bold the label cell text
+  • @label-del          → strikethrough the label cell text
+  • @label-u            → underline the label cell text
+  • @label-i            → italic the label cell text
+  • @label-muted        → muted color on the label cell
+
+COPY IMPROVEMENTS
+  • "Copy Table" button now copies a clean human-readable
+    "Label: Value" list (one row per line) to the clipboard
+  • New "Copy CSV" button copies a proper comma-separated version
+  • New "Copy MD" button copies a Markdown table to the clipboard
+  • Row-level @copy directive still works for individual cell copy
+  • Added "Copy Whole Table" button to copy full rich HTML layout.
+
+Changelog V1.3:
+─────────────────────────────────────────────────────────────────
+NEW SYNTAX
+  • Inline unit suffix in list items:
+      - [ ] Pen = 10*10+170 BDT        → calculates 10*10+170, appends "BDT"
+      - [ ] Total = Items.Pen+100 BDT  → path-reference inside list, appends "BDT"
+  • Both checkbox (- [ ]) and plain dash (-) list items fully supported
+  • Nested children resolved for path references (e.g. Items.Pen)
+
+NEW FEATURES
+  • @Copy row directive: adds a copy icon on that row's value cell
+  • Global copy button copies full table (already existed, now also copies unit)
+  • Horizontal scroll wrapper — long tables no longer overflow
+  • Full Unicode label support (Arabic, CJK, Bangla, etc.) in all list items
+
+Changelog V1.2:
+─────────────────────────────────────────────────────────────────
+VISUAL IMPROVEMENTS
+  • Polished table design: accent bar, zebra rows, hover glow
+  • Row types: ---header--- (section header / colspan), ---divider---
+  • Column layout: supports 2-col (label|value) or 3-col (label|note|value)
+  • Row-span via @span:N directive on consecutive same-label rows
+  • Highlight row with @highlight or @highlight:color
+  • Indent level shown visually with left-padding (sub-items)
+  • Result-bar: colored progress bar behind value cell (percentage display)
+  • Compact / Wide mode via block directive: #mode:compact | #mode:wide
+
+NEW DIRECTIVES (top of block)
+  • #title: My Budget           → table caption
+  • #mode: compact | wide       → layout density
+  • #cols: 2 | 3                → 2-col (default) or 3-col with note column
+  • #currency: BDT              → global unit suffix shown on all numbers
+  • #decimals: 0|1|2|3          → global decimal places
+  • #theme: default|green|blue|purple|red → accent color
+
+ROW DIRECTIVES (per line)
+  • @h or ---Title---           → full-width section header (colspan)
+  • @note: text                 → adds note/description in 3-col mode
+  • @highlight or @hl:color     → color-highlight that row
+  • @bar                        → show value as progress bar (needs @max:N)
+  • @max: N                     → denominator for progress bar
+  • @span: N                    → merge this + next N-1 rows (rowspan)
+  • @indent: N                  → manually indent label N levels
+  • @bold                       → bold the value
+  • @separator                  → thin divider row
+  • @del / @strike              → strikethrough value
+  • @u / @underline             → underline value
+  • @i / @italic                → italic value
+  • @color: #hex                → custom value text color
+  • @dim                        → dim value (muted opacity)
+  • @success / @warning / @danger → semantic color on value
+  • @tag: Label                 → badge tag in note column
+  • @label-bold / @label-del / @label-u / @label-i / @label-muted → label cell styles
+
+NEW CALCULATION FUNCTIONS
+  • Pct(value, total)           → percentage value/total*100
+  • Clamp(v, min, max)          → clamp value between min and max
+  • Lerp(a, b, t)               → linear interpolation
+  • GrowthRate(old, new)        → % growth rate
+  • CompoundInterest(P,r,n,t)   → P*(1+r/n)^(n*t)
+  • SimpleInterest(P,r,t)       → P*r*t/100
+  • Round2(v)                   → round to 2 decimals
+  • Round(v, n)                 → round to N decimals
+
+BUG FIXES CARRIED FROM V1.1
+  • If(true, false) 2-arg form works
+  • Nested If fully resolved innermost-first
+  • Smart value extraction: "10 BDT", "৳500", "$100", "100kg" → extracts number
+  • List headers "- [ ] My List" skipped gracefully in calc blocks
+─────────────────────────────────────────────────────────────────
 */
 
 const { Plugin, MarkdownView, Notice, setIcon } = require("obsidian");
@@ -17,33 +121,57 @@ const CONFIG = {
     RENDER_DEBOUNCE_MS: 300,
     CHECKBOX_DELAY_MS: 150,
     MAX_RECURSION_DEPTH: 100,
-    YIELD_INTERVAL_LINES: 400, // Yield to main thread every N lines
-    CACHE_SIZE: 50, // Keep last 50 files in memory
+    YIELD_INTERVAL_LINES: 400,
+    CACHE_SIZE: 50,
     STYLES: {
-        TABLE_CLASS: 'clist-table',
-        ROW_CLASS: 'clist-row',
-        CELL_LABEL: 'clist-label',
-        CELL_VALUE: 'clist-value',
+        TABLE_CLASS:     'clist-table',
+        ROW_CLASS:       'clist-row',
+        CELL_LABEL:      'clist-label',
+        CELL_NOTE:       'clist-note',
+        CELL_VALUE:      'clist-value',
+        CELL_HEADER:     'clist-header-cell',
+        ROW_HEADER:      'clist-row-header',
+        ROW_SEPARATOR:   'clist-row-sep',
         ERROR_CONTAINER: 'clist-error-box',
-        TOOLBAR: 'clist-toolbar',
-        BTN: 'clist-btn'
+        TOOLBAR:         'clist-toolbar',
+        BTN:             'clist-btn',
+        WRAPPER:         'clist-wrapper',
+        CAPTION:         'clist-caption',
+        BAR_WRAP:        'clist-bar-wrap',
+        BAR_FILL:        'clist-bar-fill',
+    },
+    THEMES: {
+        default: '#6c8ebf',
+        green:   '#5a9e6f',
+        blue:    '#3a8fc9',
+        purple:  '#8b6bbf',
+        red:     '#c96060',
+        orange:  '#c97840',
+        teal:    '#3aab9e',
     }
 };
 
 const REGEX = {
-    // Matches: - [x] Item Name = 100
-    CHECKBOX: /^- \[(x| )\]/i,
-    // Matches indentation
-    INDENT: /^(\s*)/,
-    // Matches: Label = Expression + Suffix
-    // Group 1: Label, Group 2: Prefix, Group 3: Expression, Group 4: Suffix
-    BLOCK_LINE: /(.+?)\s*=\s*(?:"(.+?)"\s*\+\s*)?(.+?)(?:\s*\+\s*"(.+?)")?$/i,
-    // Detects Bangla Digits
-    BANGLA_DIGITS: /[০-৯]/,
-    // Detects math or logical operators
-    IS_MATH: /[0-9.+\-*/%(),a-zA-Z\u0980-\u09FF]/,
-    // Aggregation Functions
-    AGGREGATION_FUNC: /\b(Sum|Avg|Max|Min|Count|StdDev|Var|Median|Mode|Range|MaxLabel|MinLabel|AscadingList|DscadingList|TotalChecked|TotalUnchecked|TotalCheckbox)\((.+?)\)/gi
+    CHECKBOX:         /^- \[(x| )\]/i,
+    INDENT:           /^(\s*)/,
+    // Captures: label = [prefix +] expression [+ suffix | unit]
+    // Unit suffix is a trailing word like BDT, USD, kg, টাকা (Unicode word chars) after a space
+    BLOCK_LINE:       /^(.+?)\s*=\s*(?:"(.+?)"\s*\+\s*)?(.+?)(?:\s*\+\s*"(.+?)")?$/i,
+    // Unit suffix at end of expression: "10*5 BDT" → expr="10*5", unit="BDT"
+    UNIT_SUFFIX:      /^([\s\S]+?)\s+([\p{L}\p{Script=Latin}\p{Script=Arabic}\p{Script=Bengali}%\/a-zA-Z\u0980-\u09FF\u0600-\u06FF\u4E00-\u9FFF]{1,20})$/u,
+    BANGLA_DIGITS:    /[০-৯]/,
+    IS_MATH:          /[0-9.+\-*/%(),a-zA-Z\u0980-\u09FF]/,
+    // Unicode word characters for label matching (supports all scripts)
+    UNICODE_LABEL:    /[\p{L}\p{N}_]/u,
+    AGGREGATION_FUNC: /\b(Sum|Avg|Max|Min|Count|StdDev|Var|Median|Mode|Range|MaxLabel|MinLabel|AscadingList|DscadingList|TotalChecked|TotalUnchecked|TotalCheckbox|Pct|GrowthRate)\((.+?)\)/gi,
+    // Block-level directives: #title: ..., #mode: ..., etc.
+    BLOCK_DIRECTIVE:  /^#(title|mode|cols|currency|decimals|theme|colwidth)\s*:\s*(.+)$/i,
+    // Row-level directives: @note:, @highlight:, @bar, @max:, @span:, @indent:, @bold, @separator, @h,
+    //   @del/@strike, @u/@underline, @i/@italic, @color:, @dim, @success, @warning, @danger,
+    //   @tag:, @label-bold, @label-del, @label-u, @label-i, @label-muted
+    ROW_DIRECTIVE:    /@(note|highlight|hl|bar|max|span|indent|bold|separator|sep|h|copy|del|strike|u|underline|i|italic|color|dim|success|warning|danger|tag|label-bold|label-del|label-u|label-i|label-muted)\s*(?::\s*([^\s@]+))?/gi,
+    // Section header: ---Title--- or @h or @header
+    SECTION_HEADER:   /^---(.+)---$/,
 };
 
 // ======================================================================================
@@ -51,72 +179,103 @@ const REGEX = {
 // ======================================================================================
 
 class Utils {
-    /**
-     * Generates a fast hash of a string for caching comparisons.
-     * Uses a simple bitwise shift (djb2 variant).
-     * @param {string} str 
-     * @returns {string} Hex hash
-     */
     static hash(str) {
-        let hash = 5381;
-        let i = str.length;
-        while (i) {
-            hash = (hash * 33) ^ str.charCodeAt(--i);
-        }
+        let hash = 5381, i = str.length;
+        while (i) hash = (hash * 33) ^ str.charCodeAt(--i);
         return (hash >>> 0).toString(16);
     }
 
-    /**
-     * Creates a debounced function that delays invoking func until after wait milliseconds.
-     * @param {Function} func 
-     * @param {number} wait 
-     * @returns {Function}
-     */
     static debounce(func, wait) {
         let timeout;
         return function (...args) {
-            const context = this;
+            const ctx = this;
             clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(context, args), wait);
+            timeout = setTimeout(() => func.apply(ctx, args), wait);
         };
     }
 
-    /**
-     * Yields control to the main thread to allow UI updates (prevents freezing).
-     * @returns {Promise<void>}
-     */
     static async yieldToMain() {
-        if (typeof window.requestIdleCallback === 'function') {
+        if (typeof window.requestIdleCallback === 'function')
             return new Promise(resolve => window.requestIdleCallback(resolve));
-        }
         return new Promise(resolve => setTimeout(resolve, 0));
     }
 
-    /**
-     * Converts English digits to Bangla digits.
-     * @param {string|number} input 
-     * @returns {string}
-     */
     static toBangla(input) {
         return (input + "").replace(/[0-9]/g, d => "০১২৩৪৫৬৭৮৯"[parseInt(d)]);
     }
 
-    /**
-     * Converts Bangla digits to English digits.
-     * @param {string} input 
-     * @returns {string}
-     */
     static toEnglish(input) {
         return (input + "").replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d));
     }
 
-    /**
-     * Checks if a string contains Bangla characters.
-     * @param {string} str 
-     * @returns {boolean}
-     */
-    static isBangla(str) {
-        return REGEX.BANGLA_DIGITS.test(str);
+    static isBangla(str) { return REGEX.BANGLA_DIGITS.test(str); }
+
+    /** Format a number with given decimal places and optional Bangla conversion */
+    static formatNumber(val, decimals = 2, bangla = false) {
+        if (typeof val !== 'number' || isNaN(val)) return String(val);
+        const fixed = Number(val.toFixed(decimals));
+        let str = fixed.toLocaleString(undefined, {
+            minimumFractionDigits: decimals === 0 ? 0 : undefined,
+            maximumFractionDigits: decimals
+        });
+        return bangla ? Utils.toBangla(str) : str;
+    }
+
+    /** Parse @directive annotations from a line, returning cleaned line + directive map */
+    static parseRowDirectives(rawLine) {
+        const directives = {};
+        REGEX.ROW_DIRECTIVE.lastIndex = 0;
+        let match;
+        while ((match = REGEX.ROW_DIRECTIVE.exec(rawLine)) !== null) {
+            const key = match[1].toLowerCase();
+            const val = match[2] !== undefined ? match[2] : true;
+            directives[key] = val;
+        }
+        // Remove directives from the line
+        const cleanLine = rawLine.replace(REGEX.ROW_DIRECTIVE, '').trim();
+        REGEX.ROW_DIRECTIVE.lastIndex = 0;
+        return { cleanLine, directives };
+    }
+
+    /** Parse block-level directives from source lines starting with # */
+    static parseBlockDirectives(lines) {
+        const opts = {
+            title: null,
+            mode: 'default',   // compact | wide | default
+            cols: 2,           // 2 or 3
+            currency: null,
+            decimals: 2,
+            theme: 'default',
+            colwidth: null,
+        };
+        const remaining = [];
+        for (const line of lines) {
+            const trimmed = line.trim();
+            REGEX.BLOCK_DIRECTIVE.lastIndex = 0;
+            const m = trimmed.match(REGEX.BLOCK_DIRECTIVE);
+            if (m) {
+                const key = m[1].toLowerCase();
+                const val = m[2].trim();
+                if (key === 'cols') opts.cols = parseInt(val) || 2;
+                else if (key === 'decimals') opts.decimals = parseInt(val) ?? 2;
+                else if (key === 'theme') opts.theme = val.toLowerCase();
+                else opts[key] = val;
+            } else {
+                remaining.push(line);
+            }
+        }
+        return { opts, remaining };
+    }
+
+    /** Smart numeric extraction: "10 BDT" → 10, "৳500" → 500 */
+    static extractNumber(expr) {
+        if (expr === null || expr === undefined) return null;
+        const eng = Utils.toEnglish(String(expr)).replace(/,/g, '');
+        const hasMathOps = /[+\-*/%^()]/.test(eng);
+        if (hasMathOps) return null; // Don't strip from math expressions
+        const numMatch = eng.match(/^[^\d\-]*(-?\d+(?:\.\d+)?)[^\d]*$/);
+        if (numMatch) return numMatch[1];
+        return null;
     }
 }
 
@@ -124,136 +283,97 @@ class Utils {
 // 3. LOGGING SERVICE
 // ======================================================================================
 
-const LogLevel = {
-    DEBUG: 0,
-    INFO: 1,
-    WARN: 2,
-    ERROR: 3,
-    NONE: 4
-};
+const LogLevel = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4 };
 
 class Logger {
-    constructor(level = LogLevel.ERROR) {
-        this.level = level;
-    }
-
+    constructor(level = LogLevel.ERROR) { this.level = level; }
     static getInstance() {
         if (!Logger.instance) Logger.instance = new Logger();
         return Logger.instance;
     }
-
-    debug(msg, ...args) {
-        if (this.level <= LogLevel.DEBUG) console.log(`%c[ClistCalc:DEBUG] ${msg}`, 'color: #9E9E9E', ...args);
-    }
-
-    info(msg, ...args) {
-        if (this.level <= LogLevel.INFO) console.log(`%c[ClistCalc:INFO] ${msg}`, 'color: #2196F3', ...args);
-    }
-
-    warn(msg, ...args) {
-        if (this.level <= LogLevel.WARN) console.warn(`[ClistCalc:WARN] ${msg}`, ...args);
-    }
-
-    error(msg, ...args) {
-        if (this.level <= LogLevel.ERROR) console.error(`[ClistCalc:ERROR] ${msg}`, ...args);
-    }
+    debug(msg, ...a) { if (this.level <= 0) console.log(`%c[ClistCalc:DEBUG] ${msg}`, 'color:#9E9E9E', ...a); }
+    info(msg, ...a)  { if (this.level <= 1) console.log(`%c[ClistCalc:INFO] ${msg}`,  'color:#2196F3', ...a); }
+    warn(msg, ...a)  { if (this.level <= 2) console.warn(`[ClistCalc:WARN] ${msg}`, ...a); }
+    error(msg, ...a) { if (this.level <= 3) console.error(`[ClistCalc:ERROR] ${msg}`, ...a); }
 }
 
 // ======================================================================================
-// 4. MATH KERNEL (EXTENDED LIBRARY)
+// 4. MATH KERNEL
 // ======================================================================================
 
-/**
- * Provides a sandboxed environment for mathematical operations.
- * Includes advanced statistics and trigonometry.
- */
 class MathKernel {
     constructor() {
         this.logger = Logger.getInstance();
-        
-        // Base Function Registry
         this.functions = {
             // Basic
-            Abs: Math.abs,
-            Root: Math.sqrt,
+            Abs: Math.abs, Root: Math.sqrt,
             nRoot: (x, n) => Math.pow(x, 1 / n),
-            Power: Math.pow,
-            Ceil: Math.ceil,
-            Floor: Math.floor,
-            Round: Math.round,
+            Power: Math.pow, Ceil: Math.ceil, Floor: Math.floor,
+            Round: (v, n) => n !== undefined ? Number(v.toFixed(n)) : Math.round(v),
+            Round2: v => Number(v.toFixed(2)),
+            Clamp: (v, lo, hi) => Math.min(Math.max(v, lo), hi),
+            Lerp: (a, b, t) => a + (b - a) * t,
+
+            // Finance / percentages
+            Pct: (v, total) => total !== 0 ? (v / total) * 100 : 0,
+            GrowthRate: (oldV, newV) => oldV !== 0 ? ((newV - oldV) / oldV) * 100 : 0,
+            CompoundInterest: (P, r, n, t) => P * Math.pow(1 + r / n, n * t),
+            SimpleInterest: (P, r, t) => P * r * t / 100,
+            PMT: (r, n, pv) => (r !== 0) ? (pv * r) / (1 - Math.pow(1 + r, -n)) : pv / n,
 
             // Logarithmic
-            Log: Math.log10,
-            Ln: Math.log,
+            Log: Math.log10, Ln: Math.log,
 
-            // Trigonometry (Degrees based for user friendliness)
-            Sin: (x) => Math.sin(this._degToRad(x)),
-            Cos: (x) => Math.cos(this._degToRad(x)),
-            Tan: (x) => Math.tan(this._degToRad(x)),
-            Cot: (x) => 1 / Math.tan(this._degToRad(x)),
-            Sec: (x) => 1 / Math.cos(this._degToRad(x)),
-            Cosec: (x) => 1 / Math.sin(this._degToRad(x)),
+            // Trig (degree-based)
+            Sin: x => Math.sin(x * Math.PI / 180),
+            Cos: x => Math.cos(x * Math.PI / 180),
+            Tan: x => Math.tan(x * Math.PI / 180),
+            Cot: x => 1 / Math.tan(x * Math.PI / 180),
+            Sec: x => 1 / Math.cos(x * Math.PI / 180),
+            Cosec: x => 1 / Math.sin(x * Math.PI / 180),
+            ASin: x => Math.asin(x) * 180 / Math.PI,
+            ACos: x => Math.acos(x) * 180 / Math.PI,
+            ATan: x => Math.atan(x) * 180 / Math.PI,
 
-            // Inverse Trig
-            ASin: (x) => this._radToDeg(Math.asin(x)),
-            ACos: (x) => this._radToDeg(Math.acos(x)),
-            ATan: (x) => this._radToDeg(Math.atan(x)),
+            // Constants
+            PI: Math.PI, E: Math.E,
         };
     }
 
-    _degToRad(deg) { return deg * (Math.PI / 180); }
-    _radToDeg(rad) { return rad * (180 / Math.PI); }
-
-    /**
-     * Executes an expression string safely.
-     * @param {string} expr 
-     * @returns {number|string}
-     */
     evaluate(expr) {
         try {
-            // 1. Pre-process: Handle localization
-            let workingExpr = Utils.toEnglish(expr);
-            
-            // 2. String Masking: Protect strings like "Value" from variable replacement
+            let working = Utils.toEnglish(expr);
+
+            // Mask string literals
             const placeholders = [];
-            let maskedExpr = workingExpr.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, (match) => {
-                placeholders.push(match);
+            let masked = working.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, m => {
+                placeholders.push(m);
                 return `__STR${placeholders.length - 1}__`;
             });
 
-            // 3. Syntax Sugar Replacement
-            maskedExpr = maskedExpr
-                .replace(/\band\b/gi, " && ")
-                .replace(/\bor\b/gi, " || ")
-                .replace(/\bnot\b/gi, " ! ")
-                .replace(/(\d|\)|\s)x(\d|\(|\s)/gi, "$1*$2") // 5x5 -> 5*5
-                .replace(/==/g, " === ")
-                .replace(/!=/g, " !== ");
+            // Syntax sugar
+            masked = masked
+                .replace(/\band\b/gi, " && ").replace(/\bor\b/gi,  " || ")
+                .replace(/\bnot\b/gi, " !")
+                .replace(/(\d|\)|\s)x(\d|\(|\s)/gi, "$1*$2")
+                .replace(/(?<![=!<>])={1}(?!=)/g, m => m === '=' ? '===' : m) // bare = → ===, skip == already
+                .replace(/==/g, "===").replace(/!=/g, "!==")
+                .replace(/(\d)\s*%\s*(?!\d)/g, '$1/100'); // trailing % as /100
 
-            // 4. Restore Strings
-            const cleanExpr = maskedExpr.replace(/__STR(\d+)__/g, (m, i) => placeholders[i]);
+            // Restore strings
+            const clean = masked.replace(/__STR(\d+)__/g, (_, i) => placeholders[i]);
 
-            // 5. Short-circuit for string literals
-            if (/^["'].*["']$/.test(cleanExpr.trim())) {
-                return cleanExpr.trim().replace(/^["']|["']$/g, "");
-            }
+            // Short-circuit string literals
+            if (/^["'].*["']$/.test(clean.trim()))
+                return clean.trim().replace(/^["']|["']$/g, "");
 
-            // 6. Security & Function Injection
-            // We use the Function constructor, but only inject specific Math keys
-            // We strip unsafe characters to prevent arbitrary code execution
-            const filtered = cleanExpr.replace(/[^0-9.+\-*/%() !&=|<>,a-zA-Z\u0980-\u09FF]/g, "");
-            
-            const funcKeys = Object.keys(this.functions);
-            const funcValues = Object.values(this.functions);
-            
-            // "use strict" prevents access to global 'window' or 'document'
-            const dynamicFunc = new Function(...funcKeys, `"use strict"; return (${filtered})`);
-            
-            return dynamicFunc(...funcValues);
-
+            const filtered = clean.replace(/[^0-9.+\-*/%() !&|=<>,a-zA-Z\u0980-\u09FF_'"]/g, "");
+            const keys = Object.keys(this.functions);
+            const vals = Object.values(this.functions);
+            const fn = new Function(...keys, `"use strict"; return (${filtered})`);
+            return fn(...vals);
         } catch (err) {
-            this.logger.debug(`Eval failed for: ${expr}`, err);
-            // Return cleaned string on failure, assuming it might be text
+            this.logger.debug(`Eval failed: ${expr}`, err);
             return expr.trim().replace(/^["']|["']$/g, "");
         }
     }
@@ -263,65 +383,31 @@ class MathKernel {
 // 5. DATA MODELS
 // ======================================================================================
 
-/**
- * Represents a single line item in the bullet list.
- */
 class CalculationNode {
     constructor(name, value = 0) {
-        this.name = name;
-        this.value = value;
-        this.children = {}; // Map<string, CalculationNode>
-        
-        // Checkbox State
-        this.isChecked = false;         // [x]
-        this.isEffectiveChecked = false; // Parent is checked implies child is effectively checked
-        this.hasCheckbox = false;       // Does it have a [-] marker?
-        
-        // Metadata
-        this.rawExpression = "";
-        this.lineNumber = -1;
+        this.name             = name;
+        this.value            = value;
+        this.children         = {};
+        this.isChecked        = false;
+        this.isEffectiveChecked = false;
+        this.hasCheckbox      = false;
+        this.rawExpression    = "";
+        this.lineNumber       = -1;
     }
-
-    /**
-     * Adds a child node.
-     * @param {string} key 
-     * @param {CalculationNode} node 
-     */
-    addChild(key, node) {
-        this.children[key] = node;
-    }
-
-    /**
-     * Gets all descendant nodes as a flat array.
-     * @returns {CalculationNode[]}
-     */
+    addChild(key, node) { this.children[key] = node; }
     getDescendants() {
-        let descendants = [];
-        for (const key in this.children) {
-            const child = this.children[key];
-            descendants.push(child);
-            descendants = descendants.concat(child.getDescendants());
+        let d = [];
+        for (const k in this.children) {
+            d.push(this.children[k]);
+            d = d.concat(this.children[k].getDescendants());
         }
-        return descendants;
+        return d;
     }
 }
 
-/**
- * Wrapper for tree traversal results.
- */
 class QueryResult {
-    constructor() {
-        this.roots = []; // The nodes directly matching the path
-        this.all = [];   // All descendants of the roots (inclusive)
-    }
-
-    get values() {
-        return this.all.map(n => {
-            const num = Number(n.value);
-            return isNaN(num) ? 0 : num;
-        });
-    }
-
+    constructor() { this.roots = []; this.all = []; }
+    get values() { return this.all.map(n => { const v = Number(n.value); return isNaN(v) ? 0 : v; }); }
     get count() { return this.all.length; }
 }
 
@@ -329,198 +415,124 @@ class QueryResult {
 // 6. PARSER ENGINE
 // ======================================================================================
 
-/**
- * Parses raw Markdown text into a hierarchical CalculationNode tree.
- * Uses an asynchronous generator approach to avoid blocking the Main Thread.
- */
 class ParserEngine {
-    constructor() {
-        this.mathKernel = new MathKernel();
-    }
+    constructor() { this.mathKernel = new MathKernel(); }
 
-    /**
-     * Main parsing method.
-     * @param {string} text 
-     * @returns {Promise<CalculationNode>}
-     */
     async parse(text) {
         if (!text) return new CalculationNode("Root");
-
         const root = new CalculationNode("Root");
         const stack = [{ indent: -1, node: root }];
         const lines = text.split("\n");
-
-        let loopCounter = 0;
+        let counter = 0;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            
-            // Performance: Yield every N lines
-            loopCounter++;
-            if (loopCounter >= CONFIG.YIELD_INTERVAL_LINES) {
-                await Utils.yieldToMain();
-                loopCounter = 0;
-            }
+            if (++counter >= CONFIG.YIELD_INTERVAL_LINES) { await Utils.yieldToMain(); counter = 0; }
 
             const trimmed = line.trim();
+            // Support both "- [ ]" checkbox items and plain "- " list items
             if (!trimmed || !trimmed.startsWith("-")) continue;
 
-            // 1. Calculate Indentation
-            const indentMatch = line.match(REGEX.INDENT);
-            const indent = indentMatch ? indentMatch[0].length : 0;
+            const indent = (line.match(REGEX.INDENT) || [''])[0].length;
+            while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+            const parent = stack[stack.length - 1];
 
-            // 2. Adjust Stack (Hierarchy)
-            while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
-                stack.pop();
-            }
-            const parentContext = stack[stack.length - 1];
+            const cbMatch = trimmed.match(REGEX.CHECKBOX);
+            const hasCheckbox = !!cbMatch;
+            const isChecked = cbMatch ? cbMatch[1].toLowerCase() === 'x' : false;
+            const isEffective = isChecked || parent.node.isEffectiveChecked;
+            const isActive = isEffective || !hasCheckbox;
 
-            // 3. Extract Checkbox Logic
-            const checkboxMatch = trimmed.match(REGEX.CHECKBOX);
-            const hasCheckbox = !!checkboxMatch;
-            const isChecked = checkboxMatch ? checkboxMatch[1].toLowerCase() === 'x' : false;
-            
-            // Logic: If parent is effectively checked, child is effectively checked.
-            const isEffectiveChecked = isChecked || parentContext.node.isEffectiveChecked;
-            const isActive = isEffectiveChecked || !hasCheckbox; // If logic requires exclusion of unchecked
+            // Strip "- [ ] " or "- [x] " or "- "
+            let content = trimmed.replace(/^-\s*(?:\[[ xX]\]\s*)?/, "");
+            let namePart = content.split("=")[0].replace(/[✅].*$/, "").trim();
 
-            // 4. Extract Name & Math
-            // Remove "- " and "[x] "
-            let contentClean = trimmed.replace(/^- (\[.\] )?/, "");
-            
-            // Split name from potential calculation "Item = 50"
-            let namePart = contentClean.split("=")[0];
-            
-            // Remove trailing emojis or garbage usually found in task lists
-            namePart = namePart.replace(/[✅].*$/, "").trim();
-
-            const mathMatch = contentClean.match(/=\s*([0-9\u09E6-\u09EFx.+\-*/%() ]+)/i);
-            
-            let value = 0;
-            let rawExpression = "";
+            const mathMatch = content.match(/=\s*([\s\S]+)$/i);
+            let value = 0, rawExpr = "", unitSuffix = "";
 
             if (mathMatch) {
-                rawExpression = mathMatch[1];
-                // Only calculate if "active" (logic dependent, here we calculate always but maybe filter later)
-                // Actually, standard logic: calculate, but maybe treat as 0 in aggregates if unchecked? 
-                // For now, we calculate the literal value.
-                value = this.mathKernel.evaluate(rawExpression);
+                let exprRaw = mathMatch[1].trim();
+
+                // NEW: detect and strip trailing unit suffix e.g. "10*10+170 BDT"
+                // Unit suffix = trailing word that isn't a math operand
+                const unitMatch = exprRaw.match(REGEX.UNIT_SUFFIX);
+                if (unitMatch) {
+                    const candidate = unitMatch[2];
+                    // Only treat as unit if it doesn't look like a variable name used in math
+                    // (i.e. not followed by math operators — it's at the very end)
+                    const testExpr = unitMatch[1].trim();
+                    const looksLikeMath = /[+\-*/%^()]/.test(testExpr) || /^\d/.test(testExpr);
+                    if (looksLikeMath || /^\d+(\.\d+)?$/.test(testExpr)) {
+                        exprRaw = testExpr;
+                        unitSuffix = candidate;
+                    }
+                }
+
+                rawExpr = exprRaw;
+                const extracted = Utils.extractNumber(rawExpr);
+                if (extracted !== null) rawExpr = extracted;
+                value = this.mathKernel.evaluate(rawExpr);
             }
 
-            // 5. Create Node
-            const newNode = new CalculationNode(namePart, isActive ? value : 0);
-            newNode.isChecked = isChecked;
-            newNode.isEffectiveChecked = isEffectiveChecked;
-            newNode.hasCheckbox = hasCheckbox;
-            newNode.lineNumber = i;
-            newNode.rawExpression = rawExpression;
+            const node = new CalculationNode(namePart, isActive ? value : 0);
+            node.isChecked = isChecked;
+            node.isEffectiveChecked = isEffective;
+            node.hasCheckbox = hasCheckbox;
+            node.lineNumber = i;
+            node.rawExpression = rawExpr;
+            node.unitSuffix = unitSuffix; // store for rendering
 
-            // 6. Link to Parent
-            parentContext.node.addChild(namePart, newNode);
-
-            // 7. Push to Stack
-            stack.push({ indent: indent, node: newNode });
+            parent.node.addChild(namePart, node);
+            stack.push({ indent, node });
         }
-
         return root;
     }
 }
 
 // ======================================================================================
-// 7. CALCULATION & QUERY ENGINE
+// 7. QUERY ENGINE
 // ======================================================================================
 
 class QueryEngine {
-    constructor() {
-        this.mathKernel = new MathKernel();
-    }
+    constructor() { this.mathKernel = new MathKernel(); }
 
-    /**
-     * Traverses the tree to find nodes matching the dot-notation path.
-     * @param {CalculationNode} tree 
-     * @param {string} path (e.g., "Expenses.Food")
-     * @returns {QueryResult}
-     */
     query(tree, path) {
         const result = new QueryResult();
-        const segments = path.split(".");
-        
-        let currentLevelNodes = [tree];
-
-        // 1. Navigate down the path
-        for (const segment of segments) {
-            let nextLevelNodes = [];
-            for (const node of currentLevelNodes) {
-                if (node.children[segment]) {
-                    nextLevelNodes.push(node.children[segment]);
-                }
-            }
-            if (nextLevelNodes.length === 0) return result; // Empty result
-            currentLevelNodes = nextLevelNodes;
+        const segs = path.split(".");
+        let current = [tree];
+        for (const seg of segs) {
+            const next = [];
+            for (const n of current) { if (n.children[seg]) next.push(n.children[seg]); }
+            if (!next.length) return result;
+            current = next;
         }
-
-        result.roots = currentLevelNodes;
-
-        // 2. Collect all descendants recursively
-        const traverse = (nodes) => {
-            nodes.forEach(node => {
-                result.all.push(node);
-                traverse(Object.values(node.children));
-            });
-        };
-        
-        traverse(currentLevelNodes);
+        result.roots = current;
+        const traverse = nodes => nodes.forEach(n => { result.all.push(n); traverse(Object.values(n.children)); });
+        traverse(current);
         return result;
     }
 
-    /**
-     * Recursive Sum Logic
-     */
     getSum(tree, path) {
         const { roots } = this.query(tree, path);
-        if (!roots.length) return 0;
-
-        const sumRecursive = (node) => {
-            let total = Number(node.value) || 0;
-            for (const key in node.children) {
-                total += sumRecursive(node.children[key]);
-            }
-            return total;
-        };
-
-        return roots.reduce((acc, root) => acc + sumRecursive(root), 0);
+        const sum = n => (Number(n.value) || 0) + Object.values(n.children).reduce((a, c) => a + sum(c), 0);
+        return roots.reduce((a, r) => a + sum(r), 0);
     }
-    
-    // --- Advanced Statistics ---
 
     getStdDev(values) {
-        if (values.length === 0) return 0;
+        if (!values.length) return 0;
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const squareDiffs = values.map(v => Math.pow(v - mean, 2));
-        const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
-        return Math.sqrt(avgSquareDiff);
+        return Math.sqrt(values.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0) / values.length);
     }
-
     getMedian(values) {
-        if (values.length === 0) return 0;
-        const sorted = [...values].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        if (!values.length) return 0;
+        const s = [...values].sort((a, b) => a - b);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
     }
-
     getMode(values) {
-        if (values.length === 0) return 0;
-        const counts = {};
-        values.forEach(v => counts[v] = (counts[v] || 0) + 1);
-        let maxCount = 0;
-        let mode = 0;
-        for (const v in counts) {
-            if (counts[v] > maxCount) {
-                maxCount = counts[v];
-                mode = Number(v);
-            }
-        }
-        return mode;
+        if (!values.length) return 0;
+        const c = {}; values.forEach(v => c[v] = (c[v] || 0) + 1);
+        return Number(Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]);
     }
 }
 
@@ -529,109 +541,222 @@ class QueryEngine {
 // ======================================================================================
 
 class CacheService {
-    constructor() {
-        this.cache = new Map();
-        this.logger = Logger.getInstance();
-    }
-
+    constructor() { this.cache = new Map(); }
     static getInstance() {
         if (!CacheService.instance) CacheService.instance = new CacheService();
         return CacheService.instance;
     }
-
-    get(filePath, content) {
-        const contentHash = Utils.hash(content);
-        const entry = this.cache.get(filePath);
-
-        if (entry && entry.hash === contentHash) {
-            // this.logger.debug(`Cache HIT for ${filePath}`);
-            return entry.tree;
-        }
-        return null;
+    get(path, content) {
+        const e = this.cache.get(path);
+        return (e && e.hash === Utils.hash(content)) ? e.tree : null;
     }
-
-    set(filePath, content, tree) {
-        // Enforce size limit
-        if (this.cache.size >= CONFIG.CACHE_SIZE) {
-            const oldest = this.cache.keys().next().value;
-            this.cache.delete(oldest);
-        }
-
-        this.cache.set(filePath, {
-            hash: Utils.hash(content),
-            tree: tree,
-            timestamp: Date.now()
-        });
-        // this.logger.debug(`Cache SET for ${filePath}`);
+    set(path, content, tree) {
+        if (this.cache.size >= CONFIG.CACHE_SIZE) this.cache.delete(this.cache.keys().next().value);
+        this.cache.set(path, { hash: Utils.hash(content), tree, timestamp: Date.now() });
     }
-
-    clear() {
-        this.cache.clear();
-    }
+    clear() { this.cache.clear(); }
 }
 
 // ======================================================================================
-// 9. UI COMPONENT SYSTEM (Virtual DOM Lite)
+// 9. UI COMPONENTS
 // ======================================================================================
 
-/**
- * Base Component Class
- */
 class Component {
-    constructor(tagName, classes = []) {
-        this.el = document.createElement(tagName);
+    constructor(tag, classes = []) {
+        this.el = document.createElement(tag);
         if (classes.length) this.el.classList.add(...classes);
     }
-
-    setText(text) {
-        this.el.textContent = text;
-        return this;
-    }
-
-    append(child) {
-        if (child instanceof Component) this.el.appendChild(child.el);
-        else this.el.appendChild(child);
-        return this;
-    }
-
-    mount(parent) {
-        parent.appendChild(this.el);
-    }
-    
-    empty() {
-        this.el.innerHTML = '';
-    }
+    setText(t) { this.el.textContent = t; return this; }
+    setHTML(h) { this.el.innerHTML = h; return this; }
+    append(c) { this.el.appendChild(c instanceof Component ? c.el : c); return this; }
+    attr(k, v) { this.el.setAttribute(k, v); return this; }
+    style(k, v) { this.el.style[k] = v; return this; }
+    mount(p) { p.appendChild(this.el); }
+    empty() { this.el.innerHTML = ''; }
 }
 
 class Button extends Component {
     constructor(icon, onClick, tooltip) {
         super('button', [CONFIG.STYLES.BTN]);
-        if (icon) setIcon(this.el, icon); // Obsidian helper
+        if (icon) setIcon(this.el, icon);
         if (tooltip) this.el.setAttribute('aria-label', tooltip);
         this.el.onclick = onClick;
     }
 }
 
-class Table extends Component {
-    constructor() {
+class EnhancedTable extends Component {
+    constructor(opts = {}) {
         super('table', [CONFIG.STYLES.TABLE_CLASS]);
+        if (opts.mode)  this.el.classList.add(`clist-mode-${opts.mode}`);
+        if (opts.theme) this.el.dataset.theme = opts.theme;
+        if (opts.cols)  this.el.dataset.cols = opts.cols;
+
+        this.opts = opts;
+        this.colCount = opts.cols || 2;
+
+        if (opts.title) {
+            const caption = document.createElement('caption');
+            caption.className = CONFIG.STYLES.CAPTION;
+            caption.textContent = opts.title;
+            this.el.appendChild(caption);
+        }
+
+        // thead
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        const thLabel = document.createElement('th');
+        thLabel.className = 'clist-th-label';
+        thLabel.textContent = 'Item';
+        headRow.appendChild(thLabel);
+
+        if (this.colCount >= 3) {
+            const thNote = document.createElement('th');
+            thNote.className = 'clist-th-note';
+            thNote.textContent = 'Note';
+            headRow.appendChild(thNote);
+        }
+
+        const thValue = document.createElement('th');
+        thValue.className = 'clist-th-value';
+        thValue.textContent = 'Value';
+        headRow.appendChild(thValue);
+
+        thead.appendChild(headRow);
+        this.el.appendChild(thead);
+
         this.tbody = document.createElement('tbody');
         this.el.appendChild(this.tbody);
+        this._rowIndex = 0;
     }
 
-    addRow(label, value, isHeader = false) {
+    /**
+     * Add a section header row spanning all columns
+     */
+    addHeader(text, accentColor) {
         const tr = document.createElement('tr');
-        if (isHeader) tr.style.fontWeight = 'bold';
-        
+        tr.className = CONFIG.STYLES.ROW_HEADER;
+        const td = document.createElement('td');
+        td.className = CONFIG.STYLES.CELL_HEADER;
+        td.colSpan = this.colCount;
+        td.textContent = text;
+        if (accentColor) td.style.borderLeftColor = accentColor;
+        tr.appendChild(td);
+        this.tbody.appendChild(tr);
+        return tr;
+    }
+
+    /** Thin divider row */
+    addSeparator() {
+        const tr = document.createElement('tr');
+        tr.className = CONFIG.STYLES.ROW_SEPARATOR;
+        const td = document.createElement('td');
+        td.colSpan = this.colCount;
+        tr.appendChild(td);
+        this.tbody.appendChild(tr);
+        return tr;
+    }
+
+    /**
+     * Main data row.
+     * @param {string} label
+     * @param {string} value
+     * @param {object} opts  { note, highlight, bar, barMax, indent, bold, rowspan, zebra,
+     * del, underline, italic, color, dim, success, warning, danger, tag,
+     * labelBold, labelDel, labelUnderline, labelItalic, labelMuted }
+     */
+    addRow(label, value, opts = {}) {
+        const tr = document.createElement('tr');
+        tr.className = CONFIG.STYLES.ROW_CLASS;
+        if (this._rowIndex++ % 2 === 0) tr.classList.add('clist-row-even');
+        else tr.classList.add('clist-row-odd');
+
+        if (opts.highlight) {
+            const color = (opts.highlight === true || opts.highlight === 'true')
+                ? (CONFIG.THEMES[this.opts.theme] || CONFIG.THEMES.default)
+                : opts.highlight;
+            tr.style.setProperty('--row-hl', color + '22');
+            tr.classList.add('clist-row-highlighted');
+        }
+
+        // Label cell
         const tdLabel = document.createElement('td');
         tdLabel.className = CONFIG.STYLES.CELL_LABEL;
+        if (opts.indent) tdLabel.style.paddingLeft = `${12 + opts.indent * 16}px`;
+        if (opts.rowspan > 1) tdLabel.rowSpan = opts.rowspan;
         tdLabel.textContent = label;
+        // Label cell style directives
+        if (opts.labelBold)       tdLabel.classList.add('clist-label-bold');
+        if (opts.labelDel)        tdLabel.classList.add('clist-label-del');
+        if (opts.labelUnderline)  tdLabel.classList.add('clist-label-u');
+        if (opts.labelItalic)     tdLabel.classList.add('clist-label-i');
+        if (opts.labelMuted)      tdLabel.classList.add('clist-label-muted');
+        tr.appendChild(tdLabel);
 
+        // Note cell (3-col mode) — also used for @tag badge
+        if (this.colCount >= 3) {
+            const tdNote = document.createElement('td');
+            tdNote.className = CONFIG.STYLES.CELL_NOTE;
+            if (opts.tag) {
+                const badge = document.createElement('span');
+                badge.className = 'clist-tag';
+                badge.textContent = opts.tag;
+                tdNote.appendChild(badge);
+            } else {
+                tdNote.textContent = opts.note || '';
+            }
+            tr.appendChild(tdNote);
+        }
+
+        // Value cell
         const tdValue = document.createElement('td');
         tdValue.className = CONFIG.STYLES.CELL_VALUE;
-        tdValue.textContent = value;
+        if (opts.bold) tdValue.classList.add('clist-value-bold');
 
-        tr.appendChild(tdLabel);
+        if (opts.bar && opts.barMax) {
+            const pct = Math.min(100, Math.max(0, (parseFloat(value) / opts.barMax) * 100));
+            const wrap = document.createElement('div');
+            wrap.className = CONFIG.STYLES.BAR_WRAP;
+            const fill = document.createElement('div');
+            fill.className = CONFIG.STYLES.BAR_FILL;
+            fill.style.width = `${pct}%`;
+            const label_ = document.createElement('span');
+            label_.className = 'clist-bar-label';
+            label_.textContent = value;
+            wrap.appendChild(fill);
+            wrap.appendChild(label_);
+            tdValue.appendChild(wrap);
+        } else {
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = value;
+
+            // Text style directives on value span
+            if (opts.del)       valueSpan.classList.add('clist-value-del');
+            if (opts.underline) valueSpan.classList.add('clist-value-u');
+            if (opts.italic)    valueSpan.classList.add('clist-value-i');
+            if (opts.dim)       valueSpan.classList.add('clist-value-dim');
+            if (opts.success)   valueSpan.classList.add('clist-value-success');
+            if (opts.warning)   valueSpan.classList.add('clist-value-warning');
+            if (opts.danger)    valueSpan.classList.add('clist-value-danger');
+            if (opts.color)     valueSpan.style.color = opts.color;
+
+            tdValue.appendChild(valueSpan);
+
+            // @Copy button: inline copy icon next to value
+            if (opts.copyBtn) {
+                const copyIcon = document.createElement('button');
+                copyIcon.className = 'clist-row-copy-btn';
+                copyIcon.title = 'Copy value';
+                copyIcon.innerHTML = '⧉';
+                copyIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(opts.copyValue || value);
+                    copyIcon.innerHTML = '✓';
+                    setTimeout(() => { copyIcon.innerHTML = '⧉'; }, 1200);
+                };
+                tdValue.appendChild(copyIcon);
+            }
+        }
+
         tr.appendChild(tdValue);
         this.tbody.appendChild(tr);
         return tr;
@@ -641,10 +766,7 @@ class Table extends Component {
 class Toolbar extends Component {
     constructor() {
         super('div', [CONFIG.STYLES.TOOLBAR]);
-        this.el.style.display = 'flex';
-        this.el.style.justifyContent = 'flex-end';
-        this.el.style.marginBottom = '8px';
-        this.el.style.gap = '8px';
+        this.el.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px;gap:6px;align-items:center;';
     }
 }
 
@@ -655,226 +777,419 @@ class Toolbar extends Component {
 class RenderEngine {
     constructor() {
         this.queryEngine = new QueryEngine();
-        this.mathKernel = new MathKernel();
+        this.mathKernel  = new MathKernel();
     }
 
     /**
-     * Resolves "if(cond, A, B)" logic recursively.
+     * Resolve If(cond [,tVal [,fVal]]) — innermost-first, nested-safe.
      */
     solveIfs(input, vars) {
-        let resultStr = input;
+        let str = input;
         let safety = 0;
-        
-        while (resultStr.toLowerCase().includes("if(") && safety < CONFIG.MAX_RECURSION_DEPTH) {
-            safety++;
-            const startIdx = resultStr.toLowerCase().lastIndexOf("if(");
-            let bracketCount = 0, endIdx = -1;
-
-            // Find matching closer
-            for (let i = startIdx + 2; i < resultStr.length; i++) {
-                if (resultStr[i] === "(") bracketCount++;
-                else if (resultStr[i] === ")") {
-                    if (bracketCount === 0) { endIdx = i; break; }
-                    bracketCount--;
+        while (safety++ < CONFIG.MAX_RECURSION_DEPTH) {
+            const lower = str.toLowerCase();
+            let startIdx = -1, searchFrom = 0;
+            while (searchFrom < lower.length) {
+                const idx = lower.indexOf("if(", searchFrom);
+                if (idx === -1) break;
+                let bc = 0, endI = -1;
+                for (let i = idx + 3; i < str.length; i++) {
+                    if (str[i] === '(') bc++;
+                    else if (str[i] === ')') { if (bc === 0) { endI = i; break; } bc--; }
                 }
+                if (endI === -1) { searchFrom = idx + 3; continue; }
+                if (!str.substring(idx + 3, endI).toLowerCase().includes("if(")) {
+                    startIdx = idx; break;
+                }
+                searchFrom = idx + 3;
             }
+            if (startIdx === -1) break;
 
+            let bc = 0, endIdx = -1;
+            for (let i = startIdx + 3; i < str.length; i++) {
+                if (str[i] === '(') bc++;
+                else if (str[i] === ')') { if (bc === 0) { endIdx = i; break; } bc--; }
+            }
             if (endIdx === -1) break;
 
-            const inner = resultStr.substring(startIdx + 3, endIdx);
-            
-            // Argument Splitter (handles nested commas)
-            const args = [];
-            let currentArg = "", bLevel = 0;
-            for (const char of inner) {
-                if (char === "," && bLevel === 0) {
-                    args.push(currentArg); currentArg = "";
-                } else {
-                    if (char === "(") bLevel++;
-                    if (char === ")") bLevel--;
-                    currentArg += char;
-                }
+            const inner = str.substring(startIdx + 3, endIdx);
+            const args = []; let cur = "", bl = 0;
+            for (const ch of inner) {
+                if (ch === ',' && bl === 0) { args.push(cur); cur = ''; }
+                else { if (ch === '(') bl++; if (ch === ')') bl--; cur += ch; }
             }
-            args.push(currentArg);
+            args.push(cur);
+            if (args.length < 2) break;
 
-            if (args.length >= 3) {
-                let cond = args[0].trim();
-                const tVal = args[1].trim();
-                const fVal = args[2].trim();
-
-                // Inject Variables
-                Object.keys(vars).sort((a, b) => b.length - a.length).forEach(k => {
-                    const val = vars[k];
-                    const escapedK = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(?<=^|[^\\u0980-\\u09FF\\w])${escapedK}(?=[^\\u0980-\\u09FF\\w]|$)`, "g");
-                    cond = cond.replace(regex, ` ${val} `);
-                });
-
-                const isTrue = this.mathKernel.evaluate(cond);
-                const chosenVal = (isTrue ? tVal : fVal).trim();
-                resultStr = resultStr.substring(0, startIdx) + chosenVal + resultStr.substring(endIdx + 1);
-            } else {
-                break;
-            }
+            let cond = args[0].trim();
+            const tVal = args[1].trim();
+            const fVal = args.length >= 3 ? args[2].trim() : '""';
+            Object.keys(vars).sort((a,b) => b.length - a.length).forEach(k => {
+                const ek = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                cond = cond.replace(new RegExp(`(?<=^|[^\\u0980-\\u09FF\\w])${ek}(?=[^\\u0980-\\u09FF\\w]|$)`, 'g'), ` ${vars[k]} `);
+            });
+            const chosen = (!!this.mathKernel.evaluate(cond) ? tVal : fVal).trim();
+            str = str.substring(0, startIdx) + chosen + str.substring(endIdx + 1);
         }
-        return resultStr;
+        return str;
     }
 
-    /**
-     * Main Render Loop
-     */
+    /** Replace aggregation function calls with their computed values. */
+    solveAggregations(expression, dataTree) {
+        REGEX.AGGREGATION_FUNC.lastIndex = 0;
+        return expression.replace(REGEX.AGGREGATION_FUNC, (m, func, path) => {
+            const { roots, all } = this.queryEngine.query(dataTree, path.trim());
+            const values = all.map(n => Number(n.value) || 0);
+            const safeName = n => n.name.replace(/"/g, '\\"');
+            switch (func.toLowerCase()) {
+                case "sum":          return this.queryEngine.getSum(dataTree, path.trim());
+                case "avg":          return values.length ? values.reduce((a,b)=>a+b,0)/values.length : 0;
+                case "max":          return values.length ? Math.max(...values) : 0;
+                case "min":          return values.length ? Math.min(...values) : 0;
+                case "count":        return values.length;
+                case "stddev":       return this.queryEngine.getStdDev(values);
+                case "median":       return this.queryEngine.getMedian(values);
+                case "mode":         return this.queryEngine.getMode(values);
+                case "range":        return values.length ? Math.max(...values) - Math.min(...values) : 0;
+                case "totalchecked": return all.filter(n => n.isEffectiveChecked && !roots.includes(n)).length;
+                case "totalunchecked": return all.filter(n => n.hasCheckbox && !n.isEffectiveChecked && !roots.includes(n)).length;
+                case "totalcheckbox": return all.filter(n => n.hasCheckbox && !roots.includes(n)).length;
+                case "pct": {
+                    const pts = path.split(',').map(s => s.trim());
+                    if (pts.length >= 2) {
+                        const v = this.queryEngine.getSum(dataTree, pts[0]);
+                        const t = this.queryEngine.getSum(dataTree, pts[1]);
+                        return t !== 0 ? (v / t * 100) : 0;
+                    }
+                    return 0;
+                }
+                case "growthrate": {
+                    const pts = path.split(',').map(s => s.trim());
+                    if (pts.length >= 2) {
+                        const oldV = this.queryEngine.getSum(dataTree, pts[0]);
+                        const newV = this.queryEngine.getSum(dataTree, pts[1]);
+                        return oldV !== 0 ? ((newV - oldV) / oldV * 100) : 0;
+                    }
+                    return 0;
+                }
+                case "maxlabel": {
+                    if (!all.length) return '"None"';
+                    const maxV = Math.max(...values);
+                    return `"${all.filter(n=>(Number(n.value)||0)===maxV).map(safeName).join(', ')}"`;
+                }
+                case "minlabel": {
+                    if (!all.length) return '"None"';
+                    const minV = Math.min(...values);
+                    return `"${all.filter(n=>(Number(n.value)||0)===minV).map(safeName).join(', ')}"`;
+                }
+                case "ascadinglist": {
+                    return `"${[...all].filter(n=>!roots.includes(n)).sort((a,b)=>(Number(a.value)||0)-(Number(b.value)||0)).map(safeName).join(', ')}"`;
+                }
+                case "dscadinglist": {
+                    return `"${[...all].filter(n=>!roots.includes(n)).sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0)).map(safeName).join(', ')}"`;
+                }
+                default: return "0";
+            }
+        });
+    }
+
     render(blockContext, dataTree) {
         const { source, el } = blockContext;
-        
-        // 1. Prepare Buffer
         const fragment = document.createDocumentFragment();
-        
+
+        // 1. Parse block directives
+        const allLines = source.split("\n").filter(l => l.trim().length > 0);
+        const { opts, remaining: lines } = Utils.parseBlockDirectives(allLines);
+        const accentColor = CONFIG.THEMES[opts.theme] || CONFIG.THEMES.default;
+
         // 2. Toolbar
         const toolbar = new Toolbar();
-        
-        // Add Copy Button
+
+        // ── Copy Rich Text (Whole HTML Table) ────────────────────────────────
+        const btnRichCopy = new Button('clipboard', async () => {
+            try {
+                // Clone table so we don't accidentally wipe inline styling buttons from the live UI
+                const clone = table.el.cloneNode(true);
+                // Strip away inline action buttons from the copied format
+                clone.querySelectorAll('.clist-row-copy-btn').forEach(b => b.remove());
+                
+                const htmlStr = clone.outerHTML;
+                const textStr = clone.innerText;
+                
+                const item = new ClipboardItem({
+                    'text/html': new Blob([htmlStr], { type: 'text/html' }),
+                    'text/plain': new Blob([textStr], { type: 'text/plain' })
+                });
+                await navigator.clipboard.write([item]);
+                new Notice("✓ Copied whole table (Rich Text)!");
+            } catch (err) {
+                console.error(err);
+                // Fallback for browsers that don't support the Clipboard API objects fully
+                navigator.clipboard.writeText(table.el.innerText);
+                new Notice("✓ Copied table text!");
+            }
+        }, "Copy Whole Table");
+
+        // ── Copy as Text (Label: Value pairs) ──────────────────────────────
         const btnCopy = new Button('copy', () => {
-             // Logic to copy table content to clipboard
-             const rows = [];
-             el.querySelectorAll('tr').forEach(tr => {
-                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent);
-                 rows.push(cells.join('\t'));
-             });
-             navigator.clipboard.writeText(rows.join('\n'));
-             new Notice("Calculations copied to clipboard!");
-        }, "Copy to Clipboard");
-        
-        // Add CSV Export Button
+            const lines = [];
+            // Title
+            const caption = el.querySelector('caption');
+            if (caption) lines.push(`# ${caption.textContent.trim()}`, '');
+            // Data rows only (skip thead and separator rows)
+            el.querySelectorAll('tbody tr').forEach(tr => {
+                if (tr.classList.contains('clist-row-sep')) return;
+                if (tr.classList.contains('clist-row-header')) {
+                    const hCell = tr.querySelector('td');
+                    if (hCell) lines.push('', `── ${hCell.textContent.trim()} ──`);
+                    return;
+                }
+                const cells = Array.from(tr.querySelectorAll('td'));
+                if (!cells.length) return;
+                const labelText = cells[0]?.textContent.trim() || '';
+                const valueText = cells[cells.length - 1]?.textContent.trim() || '';
+                if (labelText) lines.push(`${labelText}: ${valueText}`);
+            });
+            navigator.clipboard.writeText(lines.join('\n'));
+            new Notice("✓ Copied as text!");
+        }, "Copy as Text");
+
+        // ── Copy as CSV ─────────────────────────────────────────────────────
         const btnCsv = new Button('download', () => {
-             const rows = [];
-             el.querySelectorAll('tr').forEach(tr => {
-                 const cells = Array.from(tr.querySelectorAll('td')).map(td => `"${td.textContent}"`);
-                 rows.push(cells.join(','));
-             });
-             const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-             const url = window.URL.createObjectURL(blob);
-             const a = document.createElement('a');
-             a.href = url;
-             a.download = 'clist-calc.csv';
-             a.click();
+            const rows = [];
+            el.querySelectorAll('tr').forEach(tr => {
+                if (tr.classList.contains('clist-row-sep')) return;
+                const cells = Array.from(tr.querySelectorAll('td,th'))
+                    .map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
+                if (cells.length) rows.push(cells.join(','));
+            });
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${opts.title || 'clist-calc'}.csv`;
+            a.click();
         }, "Export CSV");
 
-        toolbar.append(btnCopy).append(btnCsv);
-        fragment.appendChild(toolbar.el);
+        // ── Copy as Markdown table ──────────────────────────────────────────
+        const btnMD = new Button('table', () => {
+            const mdRows = [];
+            let headerDone = false;
+            el.querySelectorAll('tr').forEach(tr => {
+                if (tr.classList.contains('clist-row-sep')) return;
+                if (tr.classList.contains('clist-row-header')) return;
+                const cells = Array.from(tr.querySelectorAll('td,th'))
+                    .map(c => c.textContent.trim().replace(/\|/g, '\\|'));
+                if (!cells.length) return;
+                mdRows.push('| ' + cells.join(' | ') + ' |');
+                if (!headerDone && tr.closest('thead')) {
+                    mdRows.push('| ' + cells.map(() => '---').join(' | ') + ' |');
+                    headerDone = true;
+                }
+            });
+            // Insert separator after first row if no thead detected
+            if (mdRows.length > 1 && !headerDone) {
+                const cols = (mdRows[0].match(/\|/g) || []).length - 1;
+                mdRows.splice(1, 0, '| ' + Array(cols).fill('---').join(' | ') + ' |');
+            }
+            navigator.clipboard.writeText(mdRows.join('\n'));
+            new Notice("✓ Copied as Markdown table!");
+        }, "Copy as Markdown");
 
-        // 3. Table Construction
-        const table = new Table();
+        toolbar.append(btnRichCopy).append(btnCopy).append(btnMD).append(btnCsv);
+        
+        // 3. Build table
+        const table = new EnhancedTable({
+            title:  opts.title,
+            mode:   opts.mode,
+            theme:  opts.theme,
+            cols:   opts.cols,
+        });
+
         const vars = {};
-        const lines = source.split("\n").filter(l => l.trim().length > 0);
+        const globalCurrency = opts.currency || '';
+        const globalDecimals = opts.decimals;
 
         try {
-            lines.forEach(line => {
-                const isHidden = line.trim().startsWith("//");
-                const cleanLine = isHidden ? line.trim().substring(2).trim() : line.trim();
-                const match = cleanLine.match(REGEX.BLOCK_LINE);
+            lines.forEach(rawLine => {
+                const rawTrimmed = rawLine.trim();
 
-                if (match) {
-                    const label = match[1].trim();
-                    const prefix = match[2] || "";
-                    let expression = match[3].trim();
-                    const suffix = match[4] || "";
+                // a) Skip empty
+                if (!rawTrimmed) return;
 
-                    const useBangla = Utils.isBangla(expression);
+                // b) Hidden line (//)
+                const isHidden = rawTrimmed.startsWith("//");
+                const lineForParsing = isHidden ? rawTrimmed.substring(2).trim() : rawTrimmed;
 
-                    // A. Aggregations Replacement
-                    expression = expression.replace(REGEX.AGGREGATION_FUNC, (m, func, path) => {
-                        const { roots, all } = this.queryEngine.query(dataTree, path.trim());
-                        const values = all.map(n => Number(n.value) || 0);
-                        const safeName = n => n.name.replace(/"/g, '\\"');
+                // c) Parse row directives (@note, @highlight, @bar, etc.)
+                const { cleanLine, directives } = Utils.parseRowDirectives(lineForParsing);
 
-                        switch (func.toLowerCase()) {
-                            case "sum": return this.queryEngine.getSum(dataTree, path.trim());
-                            case "avg": return (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
-                            case "max": return (values.length ? Math.max(...values) : 0);
-                            case "min": return (values.length ? Math.min(...values) : 0);
-                            case "count": return values.length;
-                            case "stddev": return this.queryEngine.getStdDev(values);
-                            case "median": return this.queryEngine.getMedian(values);
-                            case "mode": return this.queryEngine.getMode(values);
-                            case "range": return (values.length ? Math.max(...values) - Math.min(...values) : 0);
-                            
-                            // Checkbox counters
-                            case "totalchecked": return all.filter(n => n.isEffectiveChecked && !roots.includes(n)).length;
-                            case "totalunchecked": return all.filter(n => n.hasCheckbox && !n.isEffectiveChecked && !roots.includes(n)).length;
-                            case "totalcheckbox": return all.filter(n => n.hasCheckbox && !roots.includes(n)).length;
-
-                            // List Generators
-                            case "maxlabel":
-                                if (!all.length) return '"None"';
-                                const maxV = Math.max(...values);
-                                return `"${all.filter(n => (Number(n.value)||0) === maxV).map(safeName).join(", ")}"`;
-                            
-                            case "minlabel":
-                                if (!all.length) return '"None"';
-                                const minV = Math.min(...values);
-                                return `"${all.filter(n => (Number(n.value)||0) === minV).map(safeName).join(", ")}"`;
-
-                            case "ascadinglist":
-                                const asc = all.filter(n => !roots.includes(n));
-                                asc.sort((a,b) => (Number(a.value)||0) - (Number(b.value)||0));
-                                return `"${asc.map(safeName).join(", ")}"`;
-
-                            case "dscadinglist":
-                                const dsc = all.filter(n => !roots.includes(n));
-                                dsc.sort((a,b) => (Number(b.value)||0) - (Number(a.value)||0));
-                                return `"${dsc.map(safeName).join(", ")}"`;
-
-                            default: return "0";
-                        }
-                    });
-
-                    // B. IF Logic
-                    expression = this.solveIfs(expression, vars);
-
-                    // C. Variable Substitution
-                    Object.keys(vars).sort((a, b) => b.length - a.length).forEach(v => {
-                        const escapedV = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`(?<=^|[^\\u0980-\\u09FF\\w])${escapedV}(?=[^\\u0980-\\u09FF\\w]|$)`, "g");
-                        expression = expression.replace(regex, ` ${vars[v]} `);
-                    });
-
-                    // D. Evaluate
-                    vars[label] = this.mathKernel.evaluate(expression);
-
-                    // E. Render Row
+                // d) Section header: ---Title--- or @h
+                const headerMatch = cleanLine.match(REGEX.SECTION_HEADER);
+                if (headerMatch || directives.h !== undefined || directives.header !== undefined) {
                     if (!isHidden) {
-                        let val = vars[label];
-                        let displayString = "";
-
-                        if (typeof val === 'number') {
-                            let formatted = val.toLocaleString(undefined, { maximumFractionDigits: 2 });
-                            if (useBangla) formatted = Utils.toBangla(formatted);
-                            displayString = formatted;
-                        } else {
-                            displayString = val;
-                        }
-                        
-                        const fullText = `${prefix}${displayString}${suffix}`.trim();
-                        table.addRow(label, fullText);
+                        const text = headerMatch ? headerMatch[1].trim() : (cleanLine || '');
+                        table.addHeader(text, accentColor);
                     }
+                    return;
+                }
+
+                // e) Separator: @separator or @sep
+                if (directives.separator !== undefined || directives.sep !== undefined) {
+                    if (!isHidden) table.addSeparator();
+                    return;
+                }
+
+                // f) Skip pure list-header lines (no = sign, not a data row)
+                // Support both "- [ ] Label" and "- Label" (no value) as list headers
+                if (!cleanLine.includes("=")) return;
+
+                // g) Match label = expression
+                // Also handle "- [ ] Label = expr" and "- Label = expr" forms (strip the list prefix)
+                let lineForMatch = cleanLine
+                    .replace(/^-\s*(?:\[[ xX]\]\s*)?/, "") // strip list prefix inside clist block
+                    .trim();
+                const match = lineForMatch.match(REGEX.BLOCK_LINE);
+                if (!match) return;
+
+                let label      = match[1].trim();
+                const prefix   = match[2] || "";
+                let expression = match[3].trim();
+                let suffix     = match[4] || "";
+
+                // NEW: extract inline unit suffix from expression (e.g. "10*10+170 BDT" → expr="10*10+170", unit="BDT")
+                if (!suffix) {
+                    const unitMatch = expression.match(REGEX.UNIT_SUFFIX);
+                    if (unitMatch) {
+                        const candidateUnit = unitMatch[2];
+                        const candidateExpr = unitMatch[1].trim();
+                        // Only treat as unit if the left side looks like math or a number/path
+                        const looksLikeMath = /[+\-*/%^()]/.test(candidateExpr) || /^\d/.test(candidateExpr) || /\./.test(candidateExpr);
+                        if (looksLikeMath) {
+                            expression = candidateExpr;
+                            suffix = candidateUnit;
+                        }
+                    }
+                }
+
+                const useBangla = Utils.isBangla(expression);
+
+                // Smart unit stripping for bare numbers
+                const hasMathOps  = /[+\-*/%^()]/.test(expression);
+                const hasFunctions = /\b(Sum|Avg|Max|Min|If|Count|StdDev|Median|Mode|Range|Pct|GrowthRate)\s*\(/i.test(expression);
+                if (!hasMathOps && !hasFunctions) {
+                    const extracted = Utils.extractNumber(expression);
+                    if (extracted !== null) expression = extracted;
+                }
+
+                // A. Aggregations
+                expression = this.solveAggregations(expression, dataTree);
+
+                // B. IF logic
+                expression = this.solveIfs(expression, vars);
+
+                // C. Variable substitution (supports Unicode label names + dot-path e.g. Items.Pen)
+                // First resolve dot-path references: Items.Pen → sum of Items > Pen node
+                expression = expression.replace(
+                    /\b([\p{L}\p{N}_][\p{L}\p{N}_\u0980-\u09FF\u0600-\u06FF\u4E00-\u9FFF]*)(?:\.([\p{L}\p{N}_][\p{L}\p{N}_\u0980-\u09FF\u0600-\u06FF\u4E00-\u9FFF]*(?:\.[\p{L}\p{N}_][\p{L}\p{N}_\u0980-\u09FF\u0600-\u06FF\u4E00-\u9FFF]*)*))\b/gu,
+                    (m, parent_, childPath) => {
+                        const fullPath = `${parent_}.${childPath}`;
+                        const sum = this.queryEngine.getSum(dataTree, fullPath);
+                        return isNaN(sum) ? m : ` ${sum} `;
+                    }
+                );
+
+                Object.keys(vars).sort((a,b) => b.length - a.length).forEach(v => {
+                    const ev = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    try {
+                        expression = expression.replace(
+                            new RegExp(`(?<![\\p{L}\\p{N}_\\u0980-\\u09FF\\u0600-\\u06FF\\u4E00-\\u9FFF])${ev}(?![\\p{L}\\p{N}_\\u0980-\\u09FF\\u0600-\\u06FF\\u4E00-\\u9FFF])`, 'gu'),
+                            ` ${vars[v]} `
+                        );
+                    } catch (e) {
+                        // fallback for labels that can't form valid regex
+                    }
+                });
+
+                // D. Evaluate
+                vars[label] = this.mathKernel.evaluate(expression);
+
+                // E. Render
+                if (!isHidden) {
+                    let val = vars[label];
+                    let displayString = "";
+
+                    if (typeof val === 'number') {
+                        displayString = Utils.formatNumber(val, globalDecimals, useBangla);
+                    } else {
+                        displayString = String(val);
+                    }
+
+                    // Assemble display: prefix + value + suffix + global currency
+                    const unitSuffix = suffix || (globalCurrency ? ` ${globalCurrency}` : "");
+                    const fullText   = `${prefix}${displayString}${unitSuffix ? ' ' + unitSuffix : ''}`.trim();
+
+                    // Bar options
+                    const barMax = directives.max ? parseFloat(directives.max) : null;
+
+                    // Indent: from directive or auto-detect from leading spaces
+                    const indentLevel = directives.indent ? parseInt(directives.indent) :
+                        Math.floor((rawLine.match(/^\s*/)[0].length) / 2);
+
+                    const tr = table.addRow(label, fullText, {
+                        note:           directives.note || '',
+                        highlight:      directives.highlight || directives.hl,
+                        bar:            directives.bar !== undefined,
+                        barMax:         barMax || (typeof val === 'number' ? Math.abs(val) * 1.2 : null),
+                        indent:         indentLevel,
+                        bold:           directives.bold !== undefined,
+                        rowspan:        directives.span ? parseInt(directives.span) : 1,
+                        copyBtn:        directives.copy !== undefined,
+                        copyValue:      fullText,
+                        // Text style directives (new in V1.4)
+                        del:            directives.del !== undefined || directives.strike !== undefined,
+                        underline:      directives.u !== undefined || directives.underline !== undefined,
+                        italic:         directives.i !== undefined || directives.italic !== undefined,
+                        color:          directives.color || null,
+                        dim:            directives.dim !== undefined,
+                        success:        directives.success !== undefined,
+                        warning:        directives.warning !== undefined,
+                        danger:         directives.danger !== undefined,
+                        tag:            directives.tag || null,
+                        // Label cell style directives (new in V1.4)
+                        labelBold:      directives['label-bold'] !== undefined,
+                        labelDel:       directives['label-del'] !== undefined,
+                        labelUnderline: directives['label-u'] !== undefined,
+                        labelItalic:    directives['label-i'] !== undefined,
+                        labelMuted:     directives['label-muted'] !== undefined,
+                    });
                 }
             });
 
-            fragment.appendChild(table.el);
+            // Wrap table in horizontal scroll container
+            const scrollWrap = document.createElement('div');
+            scrollWrap.className = 'clist-scroll-wrap';
+            scrollWrap.appendChild(table.el);
+            
+            // Wrap both the toolbar and table inside clist-wrapper to fix hover UI trigger
+            const wrapper = document.createElement('div');
+            wrapper.className = CONFIG.STYLES.WRAPPER;
+            wrapper.appendChild(toolbar.el);
+            wrapper.appendChild(scrollWrap);
+            
+            fragment.appendChild(wrapper);
 
-            // 4. Mount with animation frame
             requestAnimationFrame(() => {
-                el.innerHTML = ''; // Fast clear
+                el.innerHTML = '';
                 el.appendChild(fragment);
             });
 
         } catch (err) {
             console.error(err);
             el.innerHTML = '';
-            const errBox = document.createElement('div');
-            errBox.className = CONFIG.STYLES.ERROR_CONTAINER;
-            errBox.textContent = `⚠️ Error: ${err.message}`;
-            el.appendChild(errBox);
+            const box = document.createElement('div');
+            box.className = CONFIG.STYLES.ERROR_CONTAINER;
+            box.innerHTML = `<strong>⚠️ CList-Calc Error</strong><br><code>${err.message}</code>`;
+            el.appendChild(box);
         }
     }
 }
@@ -885,42 +1200,26 @@ class RenderEngine {
 
 module.exports = class ClistCalcPlugin extends Plugin {
     onload() {
-        console.log(`Loading ${CONFIG.PLUGIN_ID} v2.0.0`);
-        
-        // Initialize Services
-        this.parser = new ParserEngine();
-        this.renderer = new RenderEngine();
-        this.cache = CacheService.getInstance();
+        console.log(`Loading ${CONFIG.PLUGIN_ID} v1.4.0`);
+        this.parser    = new ParserEngine();
+        this.renderer  = new RenderEngine();
+        this.cache     = CacheService.getInstance();
         this.activeBlocks = new Set();
 
         this.addStyles();
-        
-        // Register Code Block
         this.registerMarkdownCodeBlockProcessor("clist-calc", async (source, el, ctx) => {
-            const block = { 
-                source, 
-                el, 
-                ctx, 
-                id: Utils.hash(Math.random().toString())
-            };
+            const block = { source, el, ctx, id: Utils.hash(Math.random().toString()) };
             this.activeBlocks.add(block);
             await this.processBlock(block);
         });
 
-        // 1. Live Preview Support (Debounced)
         this.debouncedUpdate = Utils.debounce(this.triggerUpdate.bind(this), CONFIG.RENDER_DEBOUNCE_MS);
-
-        this.registerEvent(
-            this.app.workspace.on("editor-change", (editor, view) => {
-                if (view.file) this.debouncedUpdate(view);
-            })
-        );
-
-        // 2. Reading Mode Checkbox Support
-        this.registerDomEvent(document, "click", (evt) => {
-            if (evt.target && evt.target.classList.contains("task-list-item-checkbox")) {
+        this.registerEvent(this.app.workspace.on("editor-change", (editor, view) => {
+            if (view.file) this.debouncedUpdate(view);
+        }));
+        this.registerDomEvent(document, "click", evt => {
+            if (evt.target?.classList.contains("task-list-item-checkbox"))
                 setTimeout(() => this.debouncedUpdate(), CONFIG.CHECKBOX_DELAY_MS);
-            }
         });
     }
 
@@ -930,145 +1229,326 @@ module.exports = class ClistCalcPlugin extends Plugin {
         this.cache.clear();
     }
 
-    /**
-     * Processes a single code block.
-     */
     async processBlock(block) {
-        const filePath = block.ctx.sourcePath;
-        const file = this.app.vault.getAbstractFileByPath(filePath);
+        const file = this.app.vault.getAbstractFileByPath(block.ctx.sourcePath);
         if (!file) return;
-
-        // Retrieve content (from cache if possible, otherwise disk)
-        // Note: For initial render, we might read disk.
-        // For updates, we usually get content from the active view in triggerUpdate.
-        // However, for safety in Reading mode:
         const content = await this.app.vault.read(file);
-        
-        let dataTree = this.cache.get(filePath, content);
-        if (!dataTree) {
-            dataTree = await this.parser.parse(content);
-            this.cache.set(filePath, content, dataTree);
+        let tree = this.cache.get(block.ctx.sourcePath, content);
+        if (!tree) {
+            tree = await this.parser.parse(content);
+            this.cache.set(block.ctx.sourcePath, content, tree);
         }
-
-        this.renderer.render(block, dataTree);
+        this.renderer.render(block, tree);
     }
 
-    /**
-     * Triggers a global update for the active view.
-     */
     async triggerUpdate(activeView = null) {
-        // 1. Cleanup disconnected blocks
-        for (const block of this.activeBlocks) {
+        for (const block of this.activeBlocks)
             if (!block.el.isConnected) this.activeBlocks.delete(block);
-        }
 
         const view = activeView || this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
+        if (!view?.file) return;
+        const filePath = view.file.path;
 
-        const filePath = view.file ? view.file.path : null;
-        if (!filePath) return;
+        const content = view.getMode() === "source"
+            ? view.editor.getValue()
+            : await this.app.vault.read(view.file);
 
-        // 2. Get Content (Editor Memory vs Disk)
-        let content = "";
-        if (view.getMode() === "source") {
-            content = view.editor.getValue();
-        } else {
-            content = await this.app.vault.read(view.file);
+        let tree = this.cache.get(filePath, content);
+        if (!tree) {
+            tree = await this.parser.parse(content);
+            this.cache.set(filePath, content, tree);
         }
 
-        // 3. Update Cache & Parse
-        let dataTree = this.cache.get(filePath, content);
-        if (!dataTree) {
-            dataTree = await this.parser.parse(content);
-            this.cache.set(filePath, content, dataTree);
-        }
-
-        // 4. Re-render only blocks belonging to this file
-        for (const block of this.activeBlocks) {
-            if (block.ctx.sourcePath === filePath) {
-                this.renderer.render(block, dataTree);
-            }
-        }
+        for (const block of this.activeBlocks)
+            if (block.ctx.sourcePath === filePath) this.renderer.render(block, tree);
     }
 
     addStyles() {
-        const id = 'clist-calc-styles-v2';
+        const id = 'clist-calc-styles-v14';
         if (document.getElementById(id)) return;
-        
         const style = document.createElement('style');
         style.id = id;
         style.textContent = `
-            /* Container */
-            .clist-table {
-                width: 100%;
-                border-collapse: separate;
-                border-spacing: 0;
-                margin: 10px 0;
-                border: 1px solid var(--background-modifier-border);
-                border-radius: 6px;
-                background: var(--background-primary);
-                font-size: 0.9em;
-            }
-            
-            /* Rows & Cells */
-            .clist-table td {
-                padding: 8px 12px;
-                border-bottom: 1px solid var(--background-modifier-border);
-            }
-            .clist-table tr:last-child td {
-                border-bottom: none;
-            }
-            .clist-table tr:hover td {
-                background-color: var(--background-secondary);
-            }
+/* ─── Wrapper ────────────────────────────────── */
+.clist-wrapper {
+    margin: 12px 0;
+}
 
-            /* Typography */
-            .clist-label {
-                font-weight: 600;
-                color: var(--text-muted);
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                width: 60%;
-            }
-            .clist-value {
-                text-align: right;
-                font-family: var(--font-monospace);
-                color: var(--text-normal);
-                font-weight: 700;
-            }
+/* ─── Horizontal Scroll Wrapper ───────────────── */
+.clist-scroll-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+}
+/* thin custom scrollbar */
+.clist-scroll-wrap::-webkit-scrollbar { height: 5px; }
+.clist-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+.clist-scroll-wrap::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+}
 
-            /* Toolbar */
-            .clist-toolbar {
-                opacity: 0.5;
-                transition: opacity 0.2s;
-            }
-            .clist-toolbar:hover {
-                opacity: 1;
-            }
-            .clist-btn {
-                background: transparent;
-                border: 1px solid var(--background-modifier-border);
-                padding: 4px 8px;
-                border-radius: 4px;
-                cursor: pointer;
-                color: var(--text-muted);
-            }
-            .clist-btn:hover {
-                background: var(--background-modifier-hover);
-                color: var(--text-normal);
-            }
+/* ─── Table Shell ─────────────────────────────── */
+.clist-table {
+    width: 100%;
+    min-width: 320px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--background-primary);
+    font-size: 0.88em;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.clist-table caption.clist-caption {
+    caption-side: top;
+    text-align: left;
+    padding: 8px 14px 4px;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: var(--text-accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
 
-            /* Error Box */
-            .clist-error-box {
-                padding: 10px;
-                background: rgba(255, 0, 0, 0.1);
-                border: 1px solid var(--text-error);
-                color: var(--text-error);
-                border-radius: 4px;
-                font-family: var(--font-monospace);
-                font-size: 0.8em;
-            }
+/* ─── Thead ───────────────────────────────────── */
+.clist-table thead tr {
+    background: var(--background-secondary);
+}
+.clist-table thead th {
+    padding: 7px 12px;
+    font-size: 0.78em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--background-modifier-border);
+}
+.clist-table .clist-th-value { text-align: right; }
+.clist-table .clist-th-note  { text-align: center; width: 25%; }
+.clist-table .clist-th-label { text-align: left; }
+
+/* ─── Tbody rows ──────────────────────────────── */
+.clist-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    vertical-align: middle;
+    transition: background 0.12s;
+}
+.clist-table tr:last-child td { border-bottom: none; }
+.clist-table .clist-row-even td { background: var(--background-primary); }
+.clist-table .clist-row-odd  td { background: var(--background-secondary-alt, var(--background-secondary)); }
+.clist-table tr.clist-row:hover td { background: var(--background-modifier-hover); }
+
+/* Highlighted rows */
+.clist-table tr.clist-row-highlighted td {
+    background: var(--row-hl, rgba(108,142,191,0.12)) !important;
+}
+
+/* ─── Label cell ──────────────────────────────── */
+.clist-label {
+    font-weight: 500;
+    color: var(--text-normal);
+    width: 55%;
+}
+
+/* ─── Note cell (3-col) ──────────────────────── */
+.clist-note {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-style: italic;
+    text-align: center;
+    width: 20%;
+}
+
+/* ─── Value cell ──────────────────────────────── */
+.clist-value {
+    text-align: right;
+    font-family: var(--font-monospace);
+    color: var(--text-normal);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.clist-value-bold { font-weight: 800 !important; color: var(--text-accent) !important; }
+
+/* ─── Value text-style directives (V1.4) ─────── */
+.clist-value-del  { text-decoration: line-through; opacity: 0.7; }
+.clist-value-u    { text-decoration: underline; }
+.clist-value-i    { font-style: italic; }
+.clist-value-dim  { opacity: 0.45; }
+.clist-value-success { color: var(--color-green,  #5a9e6f) !important; font-weight: 700; }
+.clist-value-warning { color: var(--color-orange, #c97840) !important; font-weight: 700; }
+.clist-value-danger  { color: var(--color-red,    #c96060) !important; font-weight: 700; }
+
+/* ─── Label cell style directives (V1.4) ─────── */
+.clist-label-bold  { font-weight: 800 !important; }
+.clist-label-del   { text-decoration: line-through; opacity: 0.7; }
+.clist-label-u     { text-decoration: underline; }
+.clist-label-i     { font-style: italic; }
+.clist-label-muted { color: var(--text-muted) !important; }
+
+/* ─── Tag badge (@tag:) ───────────────────────── */
+.clist-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--text-accent);
+    color: var(--background-primary);
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    opacity: 0.88;
+    white-space: nowrap;
+}
+
+/* ─── Section header row ──────────────────────── */
+.clist-row-header td.clist-header-cell {
+    background: var(--background-secondary) !important;
+    font-weight: 700;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-accent);
+    border-left: 3px solid var(--text-accent);
+    padding: 6px 12px;
+}
+
+/* ─── Separator row ───────────────────────────── */
+.clist-row-sep td {
+    height: 1px;
+    padding: 0 !important;
+    background: var(--background-modifier-border) !important;
+}
+
+/* ─── Progress bar ────────────────────────────── */
+.clist-bar-wrap {
+    position: relative;
+    height: 20px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 80px;
+}
+.clist-bar-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--text-accent);
+    opacity: 0.35;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+.clist-bar-label {
+    position: absolute;
+    right: 6px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.82em;
+    font-family: var(--font-monospace);
+    font-weight: 700;
+    color: var(--text-normal);
+}
+
+/* ─── Compact mode ────────────────────────────── */
+.clist-table.clist-mode-compact td,
+.clist-table.clist-mode-compact th { padding: 4px 10px; font-size: 0.83em; }
+.clist-table.clist-mode-compact caption { padding: 5px 10px 2px; }
+
+/* ─── Wide mode ───────────────────────────────── */
+.clist-table.clist-mode-wide td,
+.clist-table.clist-mode-wide th { padding: 12px 16px; }
+
+/* ─── Theme accent overrides ──────────────────── */
+.clist-table[data-theme="green"] .clist-row-header td,
+.clist-table[data-theme="green"] caption { color: #5a9e6f; border-color: #5a9e6f; }
+.clist-table[data-theme="green"] .clist-bar-fill { background: #5a9e6f; }
+.clist-table[data-theme="blue"] .clist-row-header td,
+.clist-table[data-theme="blue"] caption { color: #3a8fc9; border-color: #3a8fc9; }
+.clist-table[data-theme="blue"] .clist-bar-fill { background: #3a8fc9; }
+.clist-table[data-theme="purple"] .clist-row-header td,
+.clist-table[data-theme="purple"] caption { color: #8b6bbf; border-color: #8b6bbf; }
+.clist-table[data-theme="purple"] .clist-bar-fill { background: #8b6bbf; }
+.clist-table[data-theme="red"] .clist-row-header td,
+.clist-table[data-theme="red"] caption { color: #c96060; border-color: #c96060; }
+.clist-table[data-theme="red"] .clist-bar-fill { background: #c96060; }
+.clist-table[data-theme="orange"] .clist-row-header td,
+.clist-table[data-theme="orange"] caption { color: #c97840; border-color: #c97840; }
+.clist-table[data-theme="orange"] .clist-bar-fill { background: #c97840; }
+.clist-table[data-theme="teal"] .clist-row-header td,
+.clist-table[data-theme="teal"] caption { color: #3aab9e; border-color: #3aab9e; }
+.clist-table[data-theme="teal"] .clist-bar-fill { background: #3aab9e; }
+
+/* ─── Toolbar ─────────────────────────────────── */
+.clist-toolbar {
+    opacity: 0;
+    transition: opacity 0.18s;
+    height: 0;
+    overflow: hidden;
+}
+.clist-wrapper:hover .clist-toolbar,
+.clist-toolbar:focus-within {
+    opacity: 1;
+    height: auto;
+}
+.clist-btn {
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.8em;
+    transition: background 0.12s;
+}
+.clist-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* ─── Error box ───────────────────────────────── */
+.clist-error-box {
+    padding: 10px 14px;
+    background: rgba(255,60,60,0.08);
+    border: 1px solid var(--text-error);
+    border-left: 4px solid var(--text-error);
+    color: var(--text-error);
+    border-radius: 5px;
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+.clist-error-box code {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+/* ─── Row copy button (@Copy) ─────────────────── */
+.clist-row-copy-btn {
+    display: inline-block;
+    margin-left: 6px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    padding: 0 2px;
+    border-radius: 3px;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    line-height: 1;
+}
+.clist-table tr:hover .clist-row-copy-btn {
+    opacity: 1;
+}
+.clist-row-copy-btn:hover {
+    color: var(--text-accent);
+    background: var(--background-modifier-hover);
+}
         `;
         document.head.appendChild(style);
     }
 };
+/* nosourcemap */
