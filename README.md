@@ -1,7 +1,7 @@
  # CList Calc
 
-> **Plugin:** Carbon CCalc List · **Version:** V1.4 · **Author:** AbdurNurPorag
-> **GitHub:** https://github.com/Abdur-Nur-Porag/ccalc-list
+> **Plugin:** Carbon CList Calc · **Author:** AbdurNurPorag
+> **GitHub:** https://github.com/Abdur-Nur-Porag/CList-Calc
 
 ---
 
