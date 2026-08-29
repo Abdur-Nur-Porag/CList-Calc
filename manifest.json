@@ -1,7 +1,7 @@
 {
   "id": "clist-calc",
   "name": "CList Calc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "0.15.0",
   "description": "Perform calculations on nested or simple task lists using sum, average, and math expressions.",
   "author": "Abdur Nur Porag",
